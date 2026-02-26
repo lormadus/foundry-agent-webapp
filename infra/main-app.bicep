@@ -50,6 +50,7 @@ module webApp './core/host/container-app.bicep' = {
     ]
     enableIngress: true
     external: true
+    healthProbePath: '/api/health'
   }
 }
 

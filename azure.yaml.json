@@ -1,6 +1,6 @@
 {
   "name": "ai-foundry-agent",
-  "description": "Secure AI-powered web application with .NET, React, and Azure AI Foundry Agent Service. Features Entra ID authentication with PKCE, managed identity, and automated deployment to Azure Container Apps.",
+  "description": "Secure AI-powered web application with .NET, React, and Foundry Agent Service. Features Entra ID authentication with PKCE, managed identity, and automated deployment to Azure Container Apps.",
   "author": "Microsoft",
   "repositoryPath": ".",
   "tags": [

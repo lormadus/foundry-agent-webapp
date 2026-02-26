@@ -59,16 +59,16 @@ runSubagent(
 
 ## Deployment Phases
 
-1. **preprovision** → Entra app + AI Foundry auto-discovery + `.env` generation
-2. **provision** → Deploy Azure resources via Bicep (placeholder container image)
-3. **postprovision** → Updates Entra redirect URIs + assigns RBAC to AI Foundry
+1. **preprovision** → AI Foundry auto-discovery + tenant detection. For CI: `azd env set ENTRA_SERVICE_MANAGEMENT_REFERENCE "<guid>"`
+2. **provision** → Deploy Azure resources via Bicep (infrastructure + Entra app via Microsoft Graph Bicep extension + placeholder container image)
+3. **postprovision** → Sets `identifierUri` on Entra app + updates redirect URIs + assigns RBAC to AI Foundry + generates local dev config
 4. **predeploy** → Builds container (local Docker or ACR cloud build)
 
 **Implementation**: 
-- `deployment/hooks/preprovision.ps1` (discovery + config generation)
-- `deployment/hooks/postprovision.ps1` (Entra redirect URIs + RBAC assignment)
+- `infra/entra-app.bicep` (Entra app registration via Microsoft Graph Bicep extension)
+- `deployment/hooks/preprovision.ps1` (AI Foundry discovery)
+- `deployment/hooks/postprovision.ps1` (Entra config + RBAC + local config generation)
 - `deployment/hooks/predeploy.ps1` (container build + push)
-- `deployment/hooks/modules/New-EntraAppRegistration.ps1` (Entra app creation)
 - `deployment/hooks/modules/Get-AIFoundryAgents.ps1` (agent discovery via REST)
 
 ## Docker Multi-Stage Build
@@ -89,6 +89,12 @@ azd env set AI_FOUNDRY_RESOURCE_GROUP <rg>
 azd provision
 ```
 
+## Container Infrastructure
+
+- **Health Probes**: Liveness (`GET /api/health` every 30s) and startup (`GET /api/health` every 10s, 5s initial delay) probes configured on the Container App
+- **ACR Pull**: Uses admin credentials via `listCredentials()` — avoids chicken-and-egg with managed identity (Container App identity doesn't exist until provisioned). Production apps should use a user-assigned managed identity created before the Container App.
+- **Resource Defaults**: 0.5 vCPU, 1GB RAM, 0-3 replicas (all parameterized in `container-app.bicep`)
+
 ## Troubleshooting
 
 | Issue | Fix |
@@ -98,6 +104,7 @@ azd provision
 | No AI Foundry resources found | Create at https://ai.azure.com |
 | Multiple AI Foundry resources | Run `azd provision` to select different resource |
 | Container not updating | Check `az containerapp logs show --name $app --resource-group $rg` |
+| Container fails health check | Verify `/api/health` endpoint returns 200 — check container logs for startup errors |
 
 ## Useful Commands
 
@@ -122,20 +129,22 @@ az role assignment list --assignee $principalId
 **File**: `deployment/hooks/preprovision.ps1`
 
 **What it does**:
-1. Creates Entra app registration via `New-EntraAppRegistration.ps1`
-2. Discovers AI Foundry resources in subscription (prompts if multiple)
-3. Discovers agents via REST API using `Get-AIFoundryAgents.ps1`
+1. Discovers AI Foundry resources in subscription (prompts if multiple)
+2. Discovers agents via REST API using `Get-AIFoundryAgents.ps1`
+3. Auto-detects tenant ID
 4. Sets azd environment variables
-5. Generates `.env` files for frontend and backend
+
+**Note**: Entra app registration is handled by Bicep (`infra/entra-app.bicep`), not this hook.
 
 ## Postprovision Hook Details
 
 **File**: `deployment/hooks/postprovision.ps1`
 
 **What it does**:
-1. Gets Container App URL from Azure
-2. Updates Entra app redirect URIs (localhost + production)
+1. Sets `identifierUri` (`api://{clientId}`) on Entra app — can't be done in Bicep because it references the auto-generated `appId`
+2. Updates Entra app redirect URIs (localhost + Container App FQDN)
 3. Assigns Cognitive Services User role to Container App's managed identity on AI Foundry resource (via Azure CLI, not Bicep)
+4. Generates local dev config files (`.env.local` for frontend, `.env` for backend)
 
 **Why RBAC via CLI?**: Using Azure CLI for role assignment prevents azd from tracking the external AI Foundry resource group, avoiding accidental deletion on `azd down`.
 
@@ -195,3 +204,16 @@ ENTRYPOINT ["dotnet", "WebApp.Api.dll"]
 - **writing-csharp-code** - Backend coding patterns for Container App configuration
 - **writing-bicep-templates** - Infrastructure templates for Azure resources
 - **troubleshooting-authentication** - Entra ID and RBAC debugging
+
+## Official Documentation
+
+| Topic | URL |
+|-------|-----|
+| **Azure Container Apps** | https://learn.microsoft.com/azure/container-apps/overview |
+| **Container Apps quickstart** | https://learn.microsoft.com/azure/container-apps/quickstart-portal |
+| **Azure Developer CLI (azd)** | https://learn.microsoft.com/azure/developer/azure-developer-cli/overview |
+| **azd templates** | https://learn.microsoft.com/azure/developer/azure-developer-cli/azd-templates |
+| **Azure AI Foundry overview** | https://learn.microsoft.com/azure/ai-foundry/what-is-ai-foundry |
+| **AI Foundry Agent Service** | https://learn.microsoft.com/azure/ai-foundry/agents/overview |
+| **Managed Identity** | https://learn.microsoft.com/entra/identity/managed-identities-azure-resources/overview |
+| **Cognitive Services RBAC** | https://learn.microsoft.com/azure/ai-services/authentication |

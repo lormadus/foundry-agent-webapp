@@ -17,7 +17,7 @@ public record AgentMetadataResponse
     /// <summary>
     /// Starter prompts to display as suggestions in the chat interface.
     /// Populated from agent metadata key "starterPrompts" (newline-separated text).
-    /// Configure in Azure AI Foundry portal under agent Configuration > Starter prompts.
+    /// Configure in Microsoft Foundry portal under agent Configuration > Starter prompts.
     /// </summary>
     public List<string>? StarterPrompts { get; init; }
 }

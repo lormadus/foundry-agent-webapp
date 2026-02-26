@@ -2,7 +2,10 @@ param name string
 param location string
 param tags object
 
-resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
+@description('Number of days to retain logs')
+param retentionInDays int = 30
+
+resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: name
   location: location
   tags: tags
@@ -10,7 +13,7 @@ resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10
     sku: {
       name: 'PerGB2018'
     }
-    retentionInDays: 30
+    retentionInDays: retentionInDays
   }
 }
 

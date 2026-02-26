@@ -1,6 +1,6 @@
 # AI Agent Web App
 
-AI-powered web application with Entra ID authentication and Azure AI Foundry Agent Service integration. Deploy to Azure Container Apps with a single command.
+AI-powered web application with Entra ID authentication and Foundry Agent Service integration. Deploy to Azure Container Apps with a single command.
 
 ## Quick Start
 
@@ -22,8 +22,8 @@ azd up
 ```
 
 The `azd up` command:
-1. Creates Microsoft Entra ID app registration (automated)
-2. Deploys Azure infrastructure (ACR, Container Apps)
+1. Discovers AI Foundry resources in your subscription
+2. Creates Microsoft Entra ID app registration (via Bicep) and Azure infrastructure (ACR, Container Apps)
 3. Builds and deploys your application
 4. Opens browser to your deployed app
 
@@ -61,7 +61,7 @@ The `azd up` command:
 ### Azure Requirements
 - **Azure Subscription** with Contributor role
 - **Bicep CLI** - Installed automatically with `azd`, or manually: `az bicep install`
-- **Azure AI Foundry Resource** - Create at https://ai.azure.com with at least one agent
+- **Microsoft Foundry Resource** - Create at https://ai.azure.com with at least one agent
 
 > **Note**: Docker is optional. If not installed, `azd` automatically uses Azure Container Registry cloud build for deployment.
 
@@ -78,11 +78,12 @@ registry=https://your-registry.example.com/
 
 ### Organization-Specific Requirements
 
-If your organization has custom Entra ID policies (e.g., requires service management reference for app registrations), set this environment variable before deployment:
+If your organization requires a Service Management Reference for Entra ID app registrations, set it before deploying:
+
+For non-interactive environments (CI/CD), set it before deploying:
 
 ```powershell
-# For tenants requiring service management metadata
-azd env set ENTRA_SERVICE_MANAGEMENT_REFERENCE "https://portal.azure.com/#blade/Microsoft_AAD_IAM/ManagedAppMenuBlade/..."
+azd env set ENTRA_SERVICE_MANAGEMENT_REFERENCE "<guid-from-admin>"
 ```
 
 See [deployment/hooks/README.md](deployment/hooks/README.md#app-registration-policies) for more organization-specific configuration options.
@@ -110,17 +111,28 @@ The workspace includes optimized VS Code configuration for AI-assisted developme
 - Monitor request handling
 - Debug issues without screenshots
 
+### Debugging (`.vscode/launch.json`)
+
+| Configuration | Description |
+|---------------|-------------|
+| `.NET: Launch Backend` | Debug ASP.NET Core API with C# Dev Kit |
+| `.NET: Attach to Backend` | Attach to running dotnet watch process |
+| `Chrome: Frontend` | Debug React app in Chrome with source maps |
+| `Edge: Frontend` | Debug React app in Edge |
+| `Full Stack Debug` | Launch backend + Chrome together |
+
 ### Settings (`.vscode/settings.json`)
-- **GitHub Copilot** - Enabled with Agent Skills (`chat.useAgentSkills: true`)
+- **GitHub Copilot** - Code generation uses instruction files (`github.copilot.chat.codeGeneration.useInstructionFiles: true`)
+- **Agent Customization** - Agent customization skill enabled (`chat.agentCustomizationSkill.enabled: true`)
 - **Skills** - On-demand loading from `.github/skills/` for efficient context
 - **Terminal Scrollback** - Limited to 500 lines to prevent overwhelming AI context
 - **Markdown Linting** - Disabled to prevent noise from instruction files
 
 ## Configuration
 
-### Azure AI Foundry
+### Microsoft Foundry
 
-`azd up` automatically discovers your AI Foundry resource, project, and agent:
+`azd up` automatically discovers your Foundry resource, project, and agent:
 
 - **1 resource found**: Auto-selects and configures RBAC
 - **Multiple resources found**: Prompts you to select which one to use
@@ -183,7 +195,7 @@ azd deploy  # 3-5 minutes
 **Frontend**: React 19 + TypeScript + Vite  
 **Backend**: ASP.NET Core 9 Minimal APIs  
 **Authentication**: Microsoft Entra ID (PKCE flow)  
-**AI Integration**: Azure AI Foundry v2 Agents API (`Azure.AI.Projects` SDK)  
+**AI Integration**: Foundry Agent Service v2 Agents API (`Azure.AI.Projects` SDK)  
 **Deployment**: Single container, Azure Container Apps  
 **Local Dev**: Native (no Docker required)
 
@@ -191,7 +203,7 @@ azd deploy  # 3-5 minutes
 
 - **Office Documents**: DOCX, PPTX, and XLSX files are not supported for upload. Use PDF, images, or plain text files instead.
 - **Beta SDK**: This application uses Azure.AI.Projects SDK v1.2.0-beta.5. Some features may change before general availability.
-- **npm Peer Dependencies**: React 19 requires `--legacy-peer-deps` which skips automatic peer dependency installation. If adding packages that have peer dependencies (like `yjs` for `@lexical/yjs`), you must add them explicitly to `package.json`. Run `npm ci` locally to verify before committing.
+- **npm Peer Dependencies**: React 19 has peer dependency conflicts with some packages. If adding packages that have peer dependencies (like `yjs` for `@lexical/yjs`), you must add them explicitly to `package.json`. Run `npm ci` locally to verify before committing.
 
 For tracking feature updates, see issue [#14](https://github.com/microsoft-foundry/foundry-agent-webapp/issues/14).
 
@@ -213,6 +225,7 @@ For tracking feature updates, see issue [#14](https://github.com/microsoft-found
 ## Documentation
 
 ### For Developers
+- `ARCHITECTURE-FLOW.md` - State machines, data flow diagrams, and SSE event mapping
 - `backend/README.md` - ASP.NET Core API setup and configuration
 - `frontend/README.md` - React frontend development
 - `infra/README.md` - Azure infrastructure overview
@@ -223,6 +236,7 @@ This repository uses VS Code's Agent Skills feature for on-demand context loadin
 
 - `.github/copilot-instructions.md` - Architecture overview (always loaded)
 - `.github/skills/` - Domain-specific guidance loaded when relevant:
+  - `understanding-architecture` - State machines, SSE events, data flow
   - `deploying-to-azure` - Deployment commands and troubleshooting
   - `writing-csharp-code` - C#/ASP.NET Core patterns
   - `writing-typescript-code` - TypeScript/React patterns
@@ -231,6 +245,16 @@ This repository uses VS Code's Agent Skills feature for on-demand context loadin
   - `troubleshooting-authentication` - MSAL/JWT debugging
   - `researching-azure-ai-sdk` - SDK research workflow
   - `testing-with-playwright` - Browser testing workflow
+  - `syncing-mcp-servers` - MCP server config synchronization
+  - `testing-cli-compatibility` - CLI compatibility validation
+  - `writing-unit-tests-csharp` - C#/MSTest unit test patterns
+  - `writing-unit-tests-typescript` - TypeScript/Vitest unit test patterns
+  - `validating-ui-features` - UI feature validation procedures
+  - `committing-code` - Commit message format and conventional commit workflow
+  - `reviewing-documentation` - Documentation audit checklists and quality standards
+  - `triaging-issues` - Issue triage workflow, priority definitions, and report format
+  - `planning-features` - Structured plan template for feature implementation
+- `.github/hooks/` — Agent hook system (e.g., commit gate) for enforcing workflows
 
 ## Azure Resources Provisioned
 
@@ -239,7 +263,7 @@ This template deploys the following Azure resources:
 - **Azure Container Apps** - Serverless container hosting (0.5 vCPU, 1GB RAM, scale-to-zero enabled)
 - **Azure Container Registry** - Private container image storage (Basic tier)
 - **Log Analytics Workspace** - Application logging and monitoring
-- **Managed Identity** - System-assigned identity with RBAC to AI Foundry resource
+- **Managed Identity** - System-assigned identity with RBAC to Foundry resource
 
 **Local development requires no Azure resources** - runs natively without Docker or cloud dependencies.
 
@@ -259,10 +283,12 @@ This template deploys the following Azure resources:
 │   └── docker/                   # Multi-stage Dockerfile
 └── .github/
     ├── copilot-instructions.md   # Architecture overview (always loaded)
+    ├── hooks/                    # Agent hooks (commit gate, custom policies)
     ├── skills/                   # On-demand AI assistant guidance
+    │   ├── understanding-architecture/
     │   ├── deploying-to-azure/
     │   ├── writing-csharp-code/
     │   ├── writing-typescript-code/
-    │   └── ...                   # 8 skills total
-    └── agents/                   # Agent mode definitions
+    │   └── ...                   # 18 skills total
+    └── skills/                   # 18 on-demand AI assistant skills
 ```

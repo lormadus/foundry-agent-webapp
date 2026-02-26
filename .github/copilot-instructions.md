@@ -1,6 +1,6 @@
-**Purpose**: AI-powered web application with Entra ID authentication and Azure AI Foundry Agent Service integration.
+Azure AI Foundry Agent Service sample app — Entra ID auth, SSE streaming, Container Apps deployment.
 
-## Architecture Quick Reference
+## Architecture
 
 | Layer | Tech | Port | Entry Point |
 |-------|------|------|-------------|
@@ -12,58 +12,38 @@
 
 **Key Flow**: React → MSAL token → POST /api/chat/stream → AI Foundry → SSE chunks → UI
 
+## Why These Decisions
+
+- **Single container** — Backend serves API (`/api/*`) and React SPA from `wwwroot`. Avoids CORS, simplifies Container Apps to one resource. Don't split it.
+- **ChainedTokenCredential** — `DefaultAzureCredential` tries ~8 sources with slow timeouts. `ChainedTokenCredential(AzureCliCredential, ManagedIdentityCredential)` is predictable. Auth hanging 30+ seconds = someone used `DefaultAzureCredential`.
+- **ACR admin credentials** — Managed identity ACR pull creates chicken-and-egg: Container App needs acrPull role but the identity doesn't exist until provisioned. Admin credentials via `listCredentials()` avoid this. Production apps should use a user-assigned managed identity created before the Container App.
+- **`.npmrc` handles `--legacy-peer-deps`** — React 19 peer-dep conflicts. Run `npm install` from `frontend/` directory.
+
+## Deployment (Non-Obvious)
+
+`azd up` phases: **preprovision** → **provision** (Bicep) → **postprovision** → **predeploy** → **deploy**
+
+**What's intentionally CLI (not Bicep)**:
+- **Entra redirect URI + identifierUri update** — Entra app is created by Bicep (`infra/entra-app.bicep`), but `identifierUri` (`api://{appId}`) can't reference the auto-generated `appId` in the same declaration, and redirect URIs need the Container App FQDN which isn't available until after provision. Both are set in `postprovision.ps1`.
+- **AI Foundry discovery** — Discovers user's *existing* external AI Foundry resource via `az cognitiveservices account list`. This is a data-plane discovery operation, not resource deployment.
+- **Cross-RG RBAC** — Done via CLI so `azd down` only deletes our resource group, not the external AI Foundry resources.
+- **Entra app deletion** — Microsoft Graph resources are not tied to Azure resource groups; `azd down` (which deletes the RG) won't clean them up. `postdown.ps1` handles this.
+
+**Health probes** are conditional: disabled when placeholder image is deployed (first provision), enabled when real image exists.
+
+**Service Management Reference**: Some orgs (notably Microsoft) require this on Entra app registrations. Set via `azd env set ENTRA_SERVICE_MANAGEMENT_REFERENCE <guid>` before running `azd up`; Bicep passes it to the Microsoft Graph extension.
+
 ## Development
 
 ```powershell
-# Start both servers (VS Code compound task)
 # Ctrl+Shift+B → "Start Dev (VS Code Terminals)"
-
-# Or run azd up for full deployment
-azd up
+# Or: azd up
 ```
 
-## Subagent-First Research
+## Hooks
 
-For complex or multi-file tasks, delegate research to a subagent before making changes:
-
-```
-runSubagent(
-  agentName: "Web App Agent",
-  description: "Research [topic]",
-  prompt: "RESEARCH: [goal]. Work autonomously. Return: [file paths, patterns, line numbers]. Max 50 lines."
-)
-```
-
-**Parameters**: `agentName` (optional), `description` (3-5 words), `prompt` (detailed task)
-
-**What subagents research**: Codebase patterns, SDK docs, GitHub examples, browser testing, deployment logs.
-
-## Agents
-
-| Agent | Purpose | When to Use |
-|-------|---------|-------------|
-| `Web App Agent` | Full implementation mode with all tools | Building features, fixing bugs, code changes |
-| `Plan Feature` | Read-only planning mode | Design before implementing, multi-step features |
-| `Review Issues` | GitHub issue analysis and categorization | Reviewing issues, prioritizing work, assigning labels |
-| `Review Docs` | Documentation quality assurance | Reviewing READMEs, skills, agents for consistency |
-| `Git Commit` | Git commit with repository standards | Creating detailed commits following conventions |
-| `SDK Research` | SDK version analysis and upgrade planning | Analyzing outdated packages, finding breaking changes, planning updates |
-| `Test Agent` | UI testing with Playwright | Validating theme, new chat, cancel stream, markdown, token usage |
-
-**Workflow**: Use `Review Issues` to analyze issues → `Plan Feature` for implementation design → `Web App Agent` for implementation → `Test Agent` for UI validation → `Review Docs` for documentation updates → `Git Commit` for standardized commits. Use `SDK Research` periodically to check for SDK updates.
-
-## Skills (ALWAYS Load First)
-
-**CRITICAL**: Before ANY code exploration or subagent research, FIRST read relevant skill files to understand project patterns and conventions. Skills provide the "how things work here" context that makes code exploration productive.
-
-| Skill | Domain |
-|-------|--------|
-| `writing-csharp-code` | Backend, API, SDK |
-| `writing-typescript-code` | Frontend, React, MSAL |
-| `implementing-chat-streaming` | SSE, streaming |
-| `troubleshooting-authentication` | 401s, tokens |
-| `deploying-to-azure` | azd, deployment |
-| `researching-azure-ai-sdk` | SDK deep-dive |
-| `testing-with-playwright` | Browser testing |
-| `writing-bicep-templates` | Infrastructure |
-| `validating-ui-features` | Theme, new chat, cancel, markdown, token usage |
+| Hook | Event | What It Does |
+|------|-------|-------------|
+| **Commit Gate** | `preToolUse` | Blocks direct `git commit`. Follow `committing-code` skill → commit via `-F COMMIT_MESSAGE.md`. |
+| **Test Reminder** | `preToolUse` | Advisory: reminds to run tests if test files exist for staged changes. |
+| **Doc Sync** | `postToolUse` | Reminds to update `ARCHITECTURE-FLOW.md` when architecture-sensitive files are edited. |

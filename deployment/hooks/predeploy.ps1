@@ -54,41 +54,17 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "Docker push failed" }
     } else {
         Write-Host "Using ACR cloud build (3-5 min)..." -ForegroundColor Yellow
-        # Use --no-logs to avoid Azure CLI encoding issues on Windows with unicode characters (checkmarks)
-        $buildResult = az acr build --registry $acrName --image "web:$imageTag" `
+        $buildOutput = az acr build --registry $acrName --image "web:$imageTag" `
             --build-arg ENTRA_SPA_CLIENT_ID=$clientId `
             --build-arg ENTRA_TENANT_ID=$tenantId `
             --file deployment/docker/frontend.Dockerfile . `
-            --no-logs --only-show-errors --output json 2>&1
-        
-        if ($LASTEXITCODE -ne 0) { 
-            Write-Host "Build output: $buildResult" -ForegroundColor Red
-            throw "ACR build failed" 
+            --no-logs --only-show-errors 2>&1
+
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Build output: $buildOutput" -ForegroundColor Red
+            throw "ACR build failed"
         }
-        
-        # Check build status from JSON result.
-        # NOTE: Azure CLI can sometimes emit warnings or non-JSON text even when --output json is requested.
-        # Avoid writing scary terminating ConvertFrom-Json errors into the transcript by parsing only when it looks like JSON.
-        $trimmed = ($buildResult | Out-String).Trim()
-        if ($trimmed.StartsWith('{') -or $trimmed.StartsWith('[')) {
-            try {
-                $buildJson = $trimmed | ConvertFrom-Json -ErrorAction Stop
-                if ($buildJson.status -and $buildJson.status -ne "Succeeded") {
-                    Write-Host "Build status: $($buildJson.status)" -ForegroundColor Red
-                    throw "ACR build failed with status: $($buildJson.status)"
-                }
-                if ($buildJson.runId) {
-                    Write-Host "Build completed (Run ID: $($buildJson.runId))" -ForegroundColor Green
-                } else {
-                    Write-Host "Build completed" -ForegroundColor Green
-                }
-            } catch {
-                # If we can't parse JSON but LASTEXITCODE was 0, assume success.
-                Write-Host "Build completed" -ForegroundColor Yellow
-            }
-        } else {
-            Write-Host "Build completed" -ForegroundColor Yellow
-        }
+        Write-Host "[OK] ACR build completed" -ForegroundColor Green
     }
     Write-Host "[OK] Image built: $imageName" -ForegroundColor Green
     
@@ -97,7 +73,8 @@ try {
         $exists = az containerapp show --name $containerApp --resource-group $resourceGroup --query name -o tsv 2>$null
         if ($exists) {
             Write-Host "Updating Container App..." -ForegroundColor Cyan
-            az containerapp update --name $containerApp --resource-group $resourceGroup --image $imageName --output none
+            az containerapp update --name $containerApp --resource-group $resourceGroup `
+                --image $imageName --output none
             if ($LASTEXITCODE -ne 0) { throw "Container App update failed" }
             Write-Host "[OK] Container App updated" -ForegroundColor Green
         } else {

@@ -1,22 +1,24 @@
 #!/usr/bin/env pwsh
-# Post-provision: Updates Entra app redirect URIs and assigns RBAC to AI Foundry resource
+# Post-provision: Configures Entra app (identifierUri + redirect URIs), assigns RBAC, generates local dev config
+# The Entra app itself is created declaratively by Bicep (infra/entra-app.bicep)
 
 $ErrorActionPreference = "Stop"
 . "$PSScriptRoot/modules/HookLogging.ps1"
 Start-HookLog -HookName "postprovision" -EnvironmentName $env:AZURE_ENV_NAME
 
-Write-Host "Post-Provision: Configure Entra App & RBAC" -ForegroundColor Cyan
+Write-Host "Post-Provision: Configure Entra App, RBAC & Local Config" -ForegroundColor Cyan
 
-# Get required env vars
+# Get required env vars (ENTRA_SPA_CLIENT_ID is now a Bicep output)
 $clientId = azd env get-value ENTRA_SPA_CLIENT_ID 2>$null
 $containerAppUrl = azd env get-value WEB_ENDPOINT 2>$null
 $webIdentityPrincipalId = azd env get-value WEB_IDENTITY_PRINCIPAL_ID 2>$null
 $aiFoundryResourceGroup = azd env get-value AI_FOUNDRY_RESOURCE_GROUP 2>$null
 $aiFoundryResourceName = azd env get-value AI_FOUNDRY_RESOURCE_NAME 2>$null
 $subscriptionId = azd env get-value AZURE_SUBSCRIPTION_ID 2>$null
+$tenantId = azd env get-value ENTRA_TENANT_ID 2>$null
 
 if (-not $clientId) {
-    Write-Host "[ERROR] ENTRA_SPA_CLIENT_ID not set" -ForegroundColor Red
+    Write-Host "[ERROR] ENTRA_SPA_CLIENT_ID not set (should be output from Bicep)" -ForegroundColor Red
     exit 1
 }
 if (-not $containerAppUrl) {
@@ -24,22 +26,31 @@ if (-not $containerAppUrl) {
     exit 1
 }
 
+Write-Host "[OK] Client ID: $clientId (from Bicep)" -ForegroundColor Green
 Write-Host "[OK] Container App: $containerAppUrl" -ForegroundColor Green
 
-# Update Entra app redirect URIs
+# Set identifierUri and update redirect URIs on Entra app
+# identifierUri can't be set in Bicep because it references the auto-generated appId
 $app = az ad app show --id $clientId | ConvertFrom-Json
-$redirectUris = @(
-    "http://localhost:8080",
-    "http://localhost:5173",
-    $containerAppUrl
-)
+$objectId = $app.id
+$identifierUri = "api://$clientId"
 
-$spaBody = @{ spa = @{ redirectUris = $redirectUris } } | ConvertTo-Json -Depth 10
+$patchBody = @{
+    identifierUris = @($identifierUri)
+    spa = @{
+        redirectUris = @(
+            "http://localhost:8080",
+            "http://localhost:5173",
+            $containerAppUrl
+        )
+    }
+} | ConvertTo-Json -Depth 10
+
 $tempFile = [System.IO.Path]::GetTempFileName()
-$spaBody | Out-File -FilePath $tempFile -Encoding utf8
+$patchBody | Out-File -FilePath $tempFile -Encoding utf8
 
 az rest --method PATCH `
-    --uri "https://graph.microsoft.com/v1.0/applications/$($app.id)" `
+    --uri "https://graph.microsoft.com/v1.0/applications/$objectId" `
     --headers "Content-Type=application/json" `
     --body "@$tempFile" | Out-Null
 
@@ -50,8 +61,8 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
+Write-Host "[OK] Identifier URI: $identifierUri" -ForegroundColor Green
 Write-Host "[OK] Redirect URIs updated" -ForegroundColor Green
-$redirectUris | ForEach-Object { Write-Host "  $_" -ForegroundColor Gray }
 
 # Assign Cognitive Services User role to web managed identity on AI Foundry resource
 # This is done via Azure CLI (not Bicep) to prevent azd from tracking the external resource group
@@ -85,6 +96,30 @@ if ($webIdentityPrincipalId -and $aiFoundryResourceGroup -and $aiFoundryResource
     Write-Host "[SKIP] AI Foundry role assignment - missing configuration" -ForegroundColor Yellow
     Write-Host "  Set AI_FOUNDRY_RESOURCE_GROUP and AI_FOUNDRY_RESOURCE_NAME environment variables" -ForegroundColor Gray
 }
+
+# Generate local dev config files (moved from preprovision — clientId comes from Bicep)
+$aiAgentEndpoint = azd env get-value AI_AGENT_ENDPOINT 2>$null
+$aiAgentId = azd env get-value AI_AGENT_ID 2>$null
+
+# Frontend .env.local
+@"
+# Auto-generated - Do not commit
+VITE_ENTRA_SPA_CLIENT_ID=$clientId
+VITE_ENTRA_TENANT_ID=$tenantId
+"@ | Out-File -FilePath "frontend/.env.local" -Encoding utf8 -Force
+
+# Backend .env
+@"
+# Auto-generated - Do not commit
+AzureAd__Instance=https://login.microsoftonline.com/
+AzureAd__TenantId=$tenantId
+AzureAd__ClientId=$clientId
+AzureAd__Audience=api://$clientId
+AI_AGENT_ENDPOINT=$aiAgentEndpoint
+AI_AGENT_ID=$aiAgentId
+"@ | Out-File -FilePath "backend/WebApp.Api/.env" -Encoding utf8 -Force
+
+Write-Host "[OK] Local dev config created" -ForegroundColor Green
 
 # Open browser
 try { Start-Process $containerAppUrl } catch { }

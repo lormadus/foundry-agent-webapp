@@ -3,7 +3,7 @@ param location string
 param tags object
 param logAnalyticsWorkspaceId string
 
-resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-05-01' = {
+resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = {
   name: name
   location: location
   tags: tags
@@ -11,8 +11,8 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-05-01'
     appLogsConfiguration: {
       destination: 'log-analytics'
       logAnalyticsConfiguration: {
-        customerId: reference(logAnalyticsWorkspaceId, '2022-10-01').customerId
-        sharedKey: listKeys(logAnalyticsWorkspaceId, '2022-10-01').primarySharedKey
+        customerId: reference(logAnalyticsWorkspaceId, '2023-09-01').customerId
+        sharedKey: listKeys(logAnalyticsWorkspaceId, '2023-09-01').primarySharedKey
       }
     }
   }

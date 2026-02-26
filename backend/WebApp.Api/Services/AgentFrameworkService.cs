@@ -13,7 +13,7 @@ namespace WebApp.Api.Services;
 #pragma warning disable OPENAI001
 
 /// <summary>
-/// Azure AI Foundry agent service using v2 Agents API.
+/// Foundry Agent Service using v2 Agents API.
 /// </summary>
 /// <remarks>
 /// Uses Microsoft.Agents.AI.AzureAI extension methods on AIProjectClient for agent loading,
@@ -670,7 +670,7 @@ public class AgentFrameworkService : IDisposable
 
     /// <summary>
     /// Parse starter prompts from agent metadata.
-    /// Azure AI Foundry stores starter prompts as newline-separated text in the "starterPrompts" metadata key.
+    /// Microsoft Foundry stores starter prompts as newline-separated text in the "starterPrompts" metadata key.
     /// Example: "How's the weather?\nIs your fridge running?\nTell me a joke"
     /// </summary>
     private List<string>? ParseStarterPrompts(Dictionary<string, string>? metadata)
@@ -678,7 +678,7 @@ public class AgentFrameworkService : IDisposable
         if (metadata == null)
             return null;
 
-        // Azure AI Foundry uses camelCase "starterPrompts" key with newline-separated values
+        // Microsoft Foundry uses camelCase "starterPrompts" key with newline-separated values
         if (!metadata.TryGetValue("starterPrompts", out var starterPromptsValue))
             return null;
 

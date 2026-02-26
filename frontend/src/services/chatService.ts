@@ -132,7 +132,7 @@ export class ChatService {
     conversationId: string | null,
     imageDataUris: string[],
     fileDataUris: Array<{ dataUri: string; fileName: string; mimeType: string }>
-  ): Record<string, any> {
+  ): Record<string, unknown> {
     return {
       message,
       conversationId,
@@ -155,7 +155,7 @@ export class ChatService {
   private async initiateStream(
     url: string,
     token: string,
-    body: Record<string, any>,
+    body: Record<string, unknown>,
     signal: AbortSignal
   ): Promise<Response> {
     const res = await fetch(url, {
@@ -393,13 +393,14 @@ export class ChatService {
             case 'done':
               return;
 
-            case 'error':
+            case 'error': {
               const error = createAppError(
                 new Error(`Stream error for message ${messageId}: ${event.data.message}`),
                 'STREAM'
               );
               this.dispatch({ type: 'CHAT_ERROR', error });
               throw error;
+            }
           }
         }
       }

@@ -9,7 +9,7 @@ description: Provides authentication troubleshooting for MSAL, JWT, and Entra ID
 
 1. Browser → MSAL.js (PKCE flow) → JWT with `Chat.ReadWrite` scope
 2. Frontend → Backend (JWT Bearer token)
-3. Backend → Azure AI Foundry (ManagedIdentityCredential)
+3. Backend → Foundry Agent Service (ManagedIdentityCredential)
 
 ## Common Issues
 

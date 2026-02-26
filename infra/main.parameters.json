@@ -8,11 +8,11 @@
     "location": {
       "value": "${AZURE_LOCATION}"
     },
-    "entraSpaClientId": {
-      "value": "${ENTRA_SPA_CLIENT_ID}"
-    },
     "entraTenantId": {
       "value": "${ENTRA_TENANT_ID}"
+    },
+    "serviceManagementReference": {
+      "value": "${ENTRA_SERVICE_MANAGEMENT_REFERENCE=}"
     },
     "webImageName": {
       "value": "${SERVICE_WEB_IMAGE_NAME=}"

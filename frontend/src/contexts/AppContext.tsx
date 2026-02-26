@@ -16,7 +16,7 @@ const AppContext = createContext<AppContextValue | undefined>(undefined);
 const devLogger = {
   enabled: import.meta.env.DEV,
   group(label: string) { if (this.enabled) console.group(label); },
-  log: function (...args: any[]) { if (this.enabled) console.log(...args); },
+  log: function (...args: unknown[]) { if (this.enabled) console.log(...args); },
   end() { if (this.enabled) console.groupEnd(); }
 };
 
@@ -26,7 +26,7 @@ const logStateChange = (action: AppAction, prevState: AppState, nextState: AppSt
   const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
   devLogger.group(`🔄 [${timestamp}] ${action.type}`);
   devLogger.log('Action:', action);
-  const changes: Record<string, any> = {};
+  const changes: Record<string, unknown> = {};
   
   // Track all meaningful state changes
   if (prevState.auth.status !== nextState.auth.status) {
@@ -95,6 +95,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
  * Hook to access app state and dispatch
  * Throws error if used outside AppProvider
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAppContext = () => {
   const context = useContext(AppContext);
   if (!context) {

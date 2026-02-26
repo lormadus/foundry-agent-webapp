@@ -19,7 +19,6 @@ description: Provides Playwright MCP testing workflow for the web application. U
 
 ```
 runSubagent(
-  agentName: "WebAppAgent",
   prompt: "TESTING task with Playwright MCP.
     
     **Servers**: Frontend at localhost:5173, Backend at localhost:8080
@@ -127,13 +126,17 @@ Changes: { field: before → after }
 | `POST /api/chat/stream` | 200 + SSE events | 401 (auth), 400 (validation) |
 | `GET /api/agent/info` | 200 + JSON metadata | 500 (agent not found) |
 
-## Browser Testing Capabilities
+## Playwright MCP
 
-Use available Playwright browser automation tools in order of preference:
-1. **Console logs** - Check for state transitions and errors
-2. **Network requests** - Verify API calls and responses
-3. **Custom code execution** - Run Playwright scripts for complex scenarios
-4. **Screenshots** - Visual verification (use sparingly, high token cost)
+| Capability | Token Cost |
+|------------|------------|
+| Navigate | Low |
+| Console logs | Low |
+| Click / Type | Low |
+| Accessibility snapshot | Medium |
+| Screenshot | High |
+
+Use console logs for state verification. Use snapshots for element presence. Avoid screenshots unless visual check required.
 
 ## Related Skills
 

@@ -104,9 +104,7 @@ Send message → Wait for response → Click New Chat button → Verify reset
 🔄 [timestamp] CHAT_CLEAR
 Action: {type: CHAT_CLEAR}
 Changes: {
-  chat.messages.length: N → 0,
-  chat.currentConversationId: "conv_xxx" → null,
-  chat.status: idle → idle
+  chat.messages.length: N → 0
 }
 ```
 
@@ -134,13 +132,13 @@ Send long prompt → While streaming → Click Stop button → Verify cancellati
 ### Steps
 
 1. **Start** a new chat (or use existing)
-2. **Send** a prompt that triggers a long response:
+2. **Send** a prompt that triggers a long code response:
    ```
-   Write a detailed 500-word essay about the history of software testing methodologies, including unit testing, integration testing, and end-to-end testing.
+   Write a comprehensive Python script that calculates Fibonacci numbers using 5 different methods: recursive, memoized, iterative, matrix exponentiation, and Binet's formula. Include detailed docstrings, type hints, performance benchmarks, and unit tests for each method.
    ```
 3. **Immediately observe**:
    - Status changes to `streaming`
-   - Stop button becomes **enabled** (red, aria-label="Cancel response")
+   - Stop button becomes **enabled** (aria-label="Cancel response")
    - Send button becomes **disabled**
    - Text chunks appearing in assistant message
 4. **Click** Stop button while streaming is active
@@ -307,9 +305,9 @@ Send message → Wait for response → Verify footer → Click expand → Verify
 2. **Verify** response footer displays:
    - Response time (e.g., `3575ms`)
    - Total token count (e.g., `848 tokens`)
-   - Expand button (`Show token usage details`)
-3. **Click** "Show token usage details" button
-4. **Verify** expanded panel shows:
+   - Info icon button (aria-label="Show token usage details")
+3. **Hover** over info icon
+4. **Verify** usage details panel shows:
    - "Usage Information" header
    - Input tokens (e.g., `Input: 799 tokens`)
    - Output tokens (e.g., `Output: 49 tokens`)
@@ -317,14 +315,14 @@ Send message → Wait for response → Verify footer → Click expand → Verify
 ### Console Evidence
 ```
 Action: {type: CHAT_STREAM_COMPLETE, usage: Object}
-// usage object: { inputTokens, outputTokens, totalTokens }
+// usage object: { promptTokens, completionTokens, totalTokens }
 ```
 
 ### Pass Criteria
 - [ ] Response time displayed after completion
 - [ ] Total token count displayed
-- [ ] Expand button present and clickable
-- [ ] Input/Output breakdown shows on expand
+- [ ] Info icon button present
+- [ ] Input/Output breakdown shows on hover
 - [ ] Values are non-zero numbers
 
 ---
@@ -391,6 +389,6 @@ Action: {type: CHAT_STREAM_COMPLETE, usage: Object}
 □ Token Usage
   □ Response time shown
   □ Token count shown
-  □ Expand button works
-  □ Input/Output breakdown
+  □ Info icon present
+  □ Input/Output breakdown on hover
 ```

@@ -7,7 +7,7 @@
 ASP.NET Core 9 Minimal API application that:
 - Serves both the REST API (`/api/*`) and React SPA (single container pattern)
 - Authenticates requests via JWT Bearer tokens from Microsoft Entra ID
-- Communicates with Azure AI Foundry Agent Service using managed identity
+- Communicates with Foundry Agent Service using managed identity
 - Streams AI agent responses via Server-Sent Events (SSE)
 
 ## Key Features
@@ -109,7 +109,7 @@ dotnet list package --vulnerable
 | Package | Version | Purpose |
 |---------|---------|---------|
 | Azure.AI.Projects | 1.2.0-beta.5 | AI Foundry v2 Agents API SDK |
-| Microsoft.Agents.AI.AzureAI | 1.0.0-preview.260108.1 | Agent Framework (simplified agent loading) |
+| Microsoft.Agents.AI.AzureAI | 1.0.0-rc1 | Agent Framework (simplified agent loading) |
 | Azure.Identity | 1.17.1 | ManagedIdentityCredential for Azure auth |
 | Microsoft.Identity.Web | 4.3.0 | JWT Bearer authentication |
 

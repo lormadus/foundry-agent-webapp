@@ -8,12 +8,17 @@ param targetPort int
 param env array = []
 param enableIngress bool = true
 param external bool = true
+param healthProbePath string = ''
+param cpu string = '0.5'
+param memory string = '1Gi'
+param minReplicas int = 0
+param maxReplicas int = 3
 
-resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' existing = {
+resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
   name: containerRegistryName
 }
 
-resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
+resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: name
   location: location
   tags: tags
@@ -51,14 +56,35 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
           image: containerImage
           env: env
           resources: {
-            cpu: json('0.5')
-            memory: '1Gi'
+            cpu: json(cpu)
+            memory: memory
           }
+          probes: !empty(healthProbePath) ? [
+            {
+              type: 'Liveness'
+              httpGet: {
+                path: healthProbePath
+                port: targetPort
+              }
+              periodSeconds: 30
+              failureThreshold: 3
+            }
+            {
+              type: 'Startup'
+              httpGet: {
+                path: healthProbePath
+                port: targetPort
+              }
+              periodSeconds: 10
+              failureThreshold: 30
+              initialDelaySeconds: 5
+            }
+          ] : []
         }
       ]
       scale: {
-        minReplicas: 0
-        maxReplicas: 3
+        minReplicas: minReplicas
+        maxReplicas: maxReplicas
       }
     }
   }

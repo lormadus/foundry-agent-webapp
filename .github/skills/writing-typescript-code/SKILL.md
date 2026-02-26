@@ -142,22 +142,16 @@ if (!response.ok) throw new Error(`API error: ${response.status}`);
 
 ## npm Dependencies
 
-**React 19**: Use `--legacy-peer-deps` flag:
+`frontend/.npmrc` sets `legacy-peer-deps=true` automatically — no flag needed when running from `frontend/`.
 
-```bash
-npm install --legacy-peer-deps
-```
+**Gotcha**: `legacy-peer-deps` skips automatic peer dependency installation. If a package requires peer deps, add them explicitly to `package.json`.
 
-**IMPORTANT**: `--legacy-peer-deps` skips automatic peer dependency installation. If a package requires peer dependencies, you must add them explicitly to `package.json`.
+**Example**: `@lexical/yjs` requires `yjs` as a peer dependency. Since peer deps aren't auto-installed, `yjs` must be in `package.json` directly.
 
-**Example**: `@fluentui-copilot/react-copilot` → `@lexical/react` → `@lexical/yjs` requires `yjs` as a peer dependency. Since peer deps aren't auto-installed, `yjs` must be in `package.json` directly.
-
-**Before committing package changes**, always verify with:
+**Before committing package changes**, verify with:
 ```bash
 npm ci  # Fails if lock file is out of sync with package.json
 ```
-
-If `npm ci` fails with "Missing: <package> from lock file", add the missing package explicitly to `package.json` and run `npm install --legacy-peer-deps` again.
 
 ## Common Mistakes
 
@@ -165,7 +159,7 @@ If `npm ci` fails with "Missing: <package> from lock file", add the missing pack
 - ❌ Calling hooks conditionally or in loops
 - ❌ Using `any` type
 - ❌ Storing tokens in component state
-- ❌ Running `npm install` without `--legacy-peer-deps`
+- ❌ Running `npm install` outside `frontend/` (misses `.npmrc` config)
 - ❌ Missing memoization in custom hooks (causes infinite re-renders)
 - ❌ Returning new objects from hooks without `useMemo`
 
@@ -192,7 +186,7 @@ If `npm ci` fails with "Missing: <package> from lock file", add the missing pack
 | `chat/ChatInput.tsx` | File uploads, character counter, cancel streaming button |
 | `chat/CitationMarker.tsx` | Inline superscript citation badge with tooltip + click handler |
 | `core/Markdown.tsx` | Renders markdown with inline citation markers via `ContentWithCitations` |
-| `core/BuiltWithBadge.tsx` | "Built with Azure AI Foundry" link badge (centered under input) |
+| `core/BuiltWithBadge.tsx` | \"Built with Microsoft Foundry\" link badge (centered under input) |
 
 ## Project-Specific: Citation System
 

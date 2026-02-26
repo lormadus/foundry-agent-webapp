@@ -170,7 +170,7 @@ app.MapFallbackToFile("index.html");  // MUST BE LAST
 
 **SDK Packages**:
 - `Azure.AI.Projects` v1.2.0-beta.5 — Main entry point, v2 Agents API
-- `Microsoft.Agents.AI.AzureAI` v1.0.0-preview.260108.1 — Agent Framework extensions
+- `Microsoft.Agents.AI.AzureAI` v1.0.0-rc1 — Agent Framework extensions
 
 **Sub-namespaces**: `Azure.AI.Projects.OpenAI`, `OpenAI.Responses`, `Microsoft.Agents.AI`, `Microsoft.Extensions.AI`
 
@@ -317,6 +317,8 @@ $type.GetMethods() | Where-Object { $_.Name -like "*Async*" } | Select-Object Na
 | Assembly | Path | Contains |
 |----------|------|----------|
 | `Azure.AI.Projects.dll` | bin/Debug/net9.0/ | AIProjectClient, AgentRecord, Conversations |
+| `Microsoft.Agents.AI.AzureAI.dll` | bin/Debug/net9.0/ | ChatClientAgent, AgentVersion, GetAIAgentAsync extension |
+| `Microsoft.Agents.AI.Abstractions.dll` | bin/Debug/net9.0/ | IChatClient, AgentReference, PromptAgentDefinition |
 | `OpenAI.dll` | bin/Debug/net9.0/ | ResponseItem, StreamingResponse*, annotations |
 | `Azure.Identity.dll` | bin/Debug/net9.0/ | Credential types |
 

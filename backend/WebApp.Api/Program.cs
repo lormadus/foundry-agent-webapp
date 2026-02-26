@@ -121,7 +121,7 @@ builder.Services.AddAuthorization(options =>
     });
 });
 
-// Register Azure AI Agent Service for Azure AI Foundry v2 Agents
+// Register Foundry Agent Service (v2 Agents API)
 // Uses Azure.AI.Projects SDK which works with v2 Agents API (/agents/ endpoint with human-readable IDs).
 builder.Services.AddScoped<AgentFrameworkService>();
 
@@ -152,21 +152,8 @@ app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Authenticated health endpoint exposes caller identity
-app.MapGet("/api/health", (HttpContext context) =>
-{
-    var userId = context.User.FindFirst("oid")?.Value ?? "unknown";
-    var userName = context.User.FindFirst("name")?.Value ?? "unknown";
-
-    return Results.Ok(new
-    {
-        status = "healthy",
-        timestamp = DateTime.UtcNow,
-        authenticated = true,
-        user = new { id = userId, name = userName }
-    });
-})
-.RequireAuthorization(ScopePolicyName)
+// Unauthenticated health endpoint for container probes
+app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }))
 .WithName("GetHealth");
 
 // Streaming Chat endpoint: Streams agent response via SSE (conversationId → chunks → usage → done)

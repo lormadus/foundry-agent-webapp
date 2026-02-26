@@ -1,6 +1,6 @@
 ---
 name: researching-azure-ai-sdk
-description: Provides research patterns for Azure AI Foundry Agent Service SDK. Use when implementing agent features, looking up SDK methods, finding code samples, or troubleshooting Azure.AI.Projects API usage.
+description: Provides research patterns for Foundry Agent Service SDK. Use when implementing agent features, looking up SDK methods, finding code samples, or troubleshooting Azure.AI.Projects API usage.
 ---
 
 # Researching Azure AI SDK
@@ -19,7 +19,6 @@ description: Provides research patterns for Azure AI Foundry Agent Service SDK. 
 
 ```
 runSubagent(
-  agentName: "WebAppAgent",
   prompt: "RESEARCH task - do NOT write code.
     
     **Question**: [specific SDK question]
@@ -56,7 +55,7 @@ runSubagent(
 
 ## SDK Architecture Overview
 
-The Azure AI Foundry SDK has **two API surfaces** for agents:
+The Foundry Agent Service SDK has **two API surfaces** for agents:
 
 | API | Endpoint | ID Format | SDK Access |
 |-----|----------|-----------|------------|
@@ -121,7 +120,7 @@ ResponseResult response = responsesClient.CreateResponse("Your prompt");
 
 **Semantic Kernel + Foundry**: https://github.com/Azure-Samples/app-service-agentic-semantic-kernel-ai-foundry-agent
 
-- Integration pattern for Semantic Kernel with Azure AI Foundry Agents
+- Integration pattern for Semantic Kernel with Foundry Agents
 
 ## 4. UI Reference Samples (React Patterns)
 
@@ -196,7 +195,7 @@ Use GitHub search to find usage examples:
 - `Azure.AI.Projects.OpenAI` - Responses API, conversations
 - `OpenAI.Responses` - Streaming types
 
-**Available Package**: `Microsoft.Agents.AI.AzureAI` v1.0.0-preview.260108.1+ now supports v2 Agents API via `AIProjectClient` extension methods. See "Microsoft Agent Framework" section below for evaluation notes.
+**Available Package**: `Microsoft.Agents.AI.AzureAI` v1.0.0-rc1 supports v2 Agents API via `AIProjectClient` extension methods. See "Microsoft Agent Framework" section below for evaluation notes.
 
 **Key Resources**:
 - NuGet (Azure.AI.Projects): https://www.nuget.org/packages/Azure.AI.Projects
@@ -204,6 +203,35 @@ Use GitHub search to find usage examples:
 - v2 Migration Guide: https://learn.microsoft.com/en-us/azure/ai-foundry/agents/how-to/migrate
 - API Reference: https://learn.microsoft.com/en-us/dotnet/api/azure.ai.projects
 - Product Docs: https://learn.microsoft.com/azure/ai-studio/
+
+## Official Azure AI Foundry Agent Service Documentation
+
+**Start here** when researching agent capabilities, limits, or new features:
+
+| Topic | URL |
+|-------|-----|
+| **Agent Service overview** | https://learn.microsoft.com/azure/ai-foundry/agents/overview |
+| **Quickstart: Create an agent** | https://learn.microsoft.com/azure/ai-foundry/agents/quickstart |
+| **Agent concepts & architecture** | https://learn.microsoft.com/azure/ai-foundry/agents/concepts |
+| **Supported models** | https://learn.microsoft.com/azure/ai-foundry/agents/concepts/supported-models |
+| **Tools: File Search** | https://learn.microsoft.com/azure/ai-foundry/agents/how-to/tools/file-search |
+| **Tools: Code Interpreter** | https://learn.microsoft.com/azure/ai-foundry/agents/how-to/tools/code-interpreter |
+| **Tools: Bing Grounding** | https://learn.microsoft.com/azure/ai-foundry/agents/how-to/tools/bing-grounding |
+| **Tools: Azure AI Search** | https://learn.microsoft.com/azure/ai-foundry/agents/how-to/tools/azure-ai-search |
+| **Tools: Azure Functions** | https://learn.microsoft.com/azure/ai-foundry/agents/how-to/tools/azure-functions |
+| **MCP server tools** | https://learn.microsoft.com/azure/ai-foundry/agents/how-to/tools/mcp-servers |
+| **v2 Agents API migration** | https://learn.microsoft.com/azure/ai-foundry/agents/how-to/migrate |
+| **REST API reference** | https://learn.microsoft.com/rest/api/azureai/agents |
+| **Quotas & limits** | https://learn.microsoft.com/azure/ai-foundry/agents/concepts/quotas-limits |
+
+**Agent Framework (Microsoft.Agents) docs**:
+
+| Topic | URL |
+|-------|-----|
+| **Agent Framework overview** | https://learn.microsoft.com/microsoft-agents/overview |
+| **Agent Framework .NET SDK** | https://github.com/microsoft/Agents-for-net |
+| **NuGet package** | https://www.nuget.org/packages/Microsoft.Agents.AI.AzureAI |
+| **IChatClient abstraction** | https://learn.microsoft.com/dotnet/api/microsoft.extensions.ai.ichatclient |
 
 ## Annotation Types in Responses
 
@@ -240,9 +268,9 @@ await foreach (var update in responsesClient.CreateResponseStreamingAsync(...))
 
 ## Microsoft Agent Framework (Used — Hybrid Approach)
 
-**Package**: `Microsoft.Agents.AI.AzureAI` v1.0.0-preview.260108.1
+**Package**: `Microsoft.Agents.AI.AzureAI` v1.0.0-rc1
 
-**Status**: ✅ **Installed and active**. As of January 2026, Agent Framework supports v2 Agents API via `AIProjectClient` extension methods.
+**Status**: ✅ **Installed and active**. Agent Framework supports v2 Agents API via `AIProjectClient` extension methods.
 
 ### Current Usage Pattern
 
@@ -365,23 +393,52 @@ Search across all .NET codebases for real-world usage:
 
 This finds how other projects use these APIs, revealing patterns and edge cases.
 
-### PowerShell Reflection (Last Resort)
+### PowerShell Reflection (When Docs Lag Behind)
 
-Only use when all above methods fail and you need to verify exact signatures on a pre-release SDK:
+Use when SDK docs are outdated or incomplete — the DLLs are the ground truth.
+
+Works even when `dotnet build` fails (loads from NuGet cache):
 
 ```powershell
-cd backend/WebApp.Api; dotnet build
+cd backend/WebApp.Api; dotnet restore
+
+# Option A: Load from build output (requires successful build)
 $asm = [Reflection.Assembly]::LoadFrom((Resolve-Path "bin/Debug/net9.0/Azure.AI.Projects.dll"))
+
+# Option B: Load from NuGet cache (works even if build fails — use for pre-release migrations)
+$dll = Get-ChildItem "$env:USERPROFILE\.nuget\packages\azure.ai.projects" -Recurse -Filter "Azure.AI.Projects.dll" | Select-Object -Last 1
+$asm = [Reflection.Assembly]::LoadFrom($dll.FullName)
 
 # Find types matching a pattern
 $asm.GetExportedTypes() | Where-Object { $_.Name -like "*Streaming*" } | ForEach-Object { $_.FullName }
 
-# Get method signatures
-$asm.GetType("Azure.AI.Projects.OpenAI.ProjectResponsesClient").GetMethods() | Select-Object Name, ReturnType
+# Get method signatures with parameter details
+$type = $asm.GetType("Azure.AI.Projects.OpenAI.ProjectResponsesClient")
+$type.GetMethods() | Where-Object { $_.Name -like "*Async*" } | Select-Object Name, ReturnType, @{N='Params';E={($_.GetParameters() | ForEach-Object { "$($_.ParameterType.Name) $($_.Name)" }) -join ', '}}
 ```
 
-**Limitations**:
-- Requires successful build first
-- Returns raw metadata without intent or usage guidance
-- No relationships or recommended patterns visible
-- Use as verification, not exploration
+**Agent Framework assemblies** (for Microsoft.Agents.AI.AzureAI migrations):
+
+```powershell
+# Load Agent Framework DLL from NuGet cache
+$pkg = Get-ChildItem "$env:USERPROFILE\.nuget\packages\microsoft.agents.ai.azureai" -Recurse -Filter "Microsoft.Agents.AI.AzureAI.dll" | Select-Object -Last 1
+$asm = [Reflection.Assembly]::LoadFrom($pkg.FullName)
+
+# Dump all exported types to see what changed between versions
+$asm.GetExportedTypes() | ForEach-Object { $_.FullName } | Sort-Object
+
+# Check if types you depend on still exist
+@("ChatClientAgent", "AgentVersion", "PromptAgentDefinition", "AgentReference") | ForEach-Object {
+    $match = $asm.GetExportedTypes() | Where-Object { $_.Name -eq $_ }
+    if ($match) { Write-Host "FOUND: $($match.FullName)" } else { Write-Host "MISSING: $_" -ForegroundColor Red }
+}
+
+# Inspect extension methods (GetAIAgentAsync, etc.)
+$asm.GetExportedTypes() | Where-Object { $_.GetMethods([Reflection.BindingFlags]::Static -bor [Reflection.BindingFlags]::Public) | Where-Object { $_.IsDefined([Runtime.CompilerServices.ExtensionAttribute], $false) } } | ForEach-Object {
+    $_.GetMethods() | Where-Object { $_.IsDefined([Runtime.CompilerServices.ExtensionAttribute], $false) } | ForEach-Object { Write-Host "$($_.DeclaringType.Name).$($_.Name)" }
+}
+```
+
+**When to use**: SDK upgrade with breaking changes, pre-release packages where docs lag, verifying actual API surface before writing migration code.
+
+**Key insight**: Load from NuGet cache (`$env:USERPROFILE\.nuget\packages\`) to inspect the *new* version's types even when the build is broken.

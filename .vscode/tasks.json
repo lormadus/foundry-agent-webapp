@@ -89,6 +89,18 @@
       }
     },
     {
+      "label": "build-backend",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["build", "${workspaceFolder}/backend/WebApp.Api/WebApp.Api.csproj", "/property:GenerateFullPaths=true", "/consoleloggerparameters:NoSummary;ForceNoAlign"],
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared",
+        "showReuseMessage": false
+      }
+    },
+    {
       "label": "Install Frontend Dependencies",
       "type": "shell",
       "command": "npm",

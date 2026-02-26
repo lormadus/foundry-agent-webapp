@@ -66,7 +66,7 @@ export interface IAgentMetadata {
   /**
    * Starter prompts from agent metadata ("starterPrompts" key, camelCase).
    * Stored as newline-separated text in the metadata dictionary.
-   * If not set in Azure AI Foundry, defaults will be used in the UI.
+   * If not set in Microsoft Foundry, defaults will be used in the UI.
    */
   starterPrompts?: string[] | null;
 }

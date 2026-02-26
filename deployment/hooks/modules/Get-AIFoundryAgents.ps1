@@ -1,5 +1,5 @@
 #!/usr/bin/env pwsh
-# Get agents from an Azure AI Foundry project (handles pagination)
+# Get agents from a Microsoft Foundry project (handles pagination)
 # Returns: Array of agent objects with properties: name, id, versions, etc.
 
 param(

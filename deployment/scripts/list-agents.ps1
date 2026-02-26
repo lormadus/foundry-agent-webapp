@@ -1,5 +1,5 @@
 #!/usr/bin/env pwsh
-# List agents in an Azure AI Foundry project
+# List agents in a Microsoft Foundry project
 
 param([string]$ProjectEndpoint)
 

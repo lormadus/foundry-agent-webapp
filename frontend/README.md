@@ -63,7 +63,7 @@ frontend/src/
 **Option 2: Manual**
 ```powershell
 cd frontend
-npm install --legacy-peer-deps
+npm install   # .npmrc sets legacy-peer-deps automatically
 npm run dev
 ```
 
@@ -91,7 +91,7 @@ function getClientId() {
 ## Development Tips
 
 - **Hot reload**: Vite HMR updates browser instantly on save
-- **React 19**: Use `--legacy-peer-deps` with npm install
+- **React 19**: `.npmrc` handles peer-dep conflicts automatically — just run `npm install` from `frontend/`
 - **State debugging**: Console shows `🔄 ACTION_TYPE` for each state change (dev only)
 - **CORS**: Backend allows `http://localhost:5173` in dev mode
 
@@ -140,7 +140,7 @@ User Action
 
 | Issue | Solution |
 |-------|----------|
-| Module not found | Run `npm install --legacy-peer-deps` |
+| Module not found | Run `npm install` from `frontend/` (`.npmrc` handles peer deps) |
 | Auth popup blocked | Allow popups for localhost in browser |
 | Stale cache | Delete `node_modules/.vite` and restart |
 | HMR not working | Check Vite terminal for errors |

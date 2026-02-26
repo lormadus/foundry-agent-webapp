@@ -24,7 +24,7 @@ $nodeModules = Join-Path $frontendPath "node_modules"
 if (-not (Test-Path (Join-Path $nodeModules "@azure/msal-react"))) {
     Write-Host "Installing frontend dependencies..." -ForegroundColor Cyan
     Push-Location $frontendPath
-    npm install --legacy-peer-deps
+    npm install
     if ($LASTEXITCODE -ne 0) { Pop-Location; exit 1 }
     Pop-Location
 }

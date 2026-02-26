@@ -11,14 +11,14 @@ interface IStarterMessageProps {
    * Starter prompts from agent metadata.
    * If not provided, falls back to default prompts.
    * 
-   * Configure in Azure AI Foundry portal under agent Configuration > Starter prompts.
+   * Configure in Microsoft Foundry portal under agent Configuration > Starter prompts.
    * Prompts are stored as newline-separated text in the "starterPrompts" metadata key.
    */
   starterPrompts?: string[];
   onPromptClick?: (prompt: string) => void;
 }
 
-// Default starter prompts when none are configured in Azure AI Foundry
+// Default starter prompts when none are configured in Microsoft Foundry
 const defaultStarterPrompts = [
   "How can you help me?",
   "What are your capabilities?",

@@ -1,12 +1,13 @@
 #!/usr/bin/env pwsh
-# Pre-provision: Creates Entra app, discovers AI Foundry resources, generates local dev config
+# Pre-provision: Discovers AI Foundry resources and configures agent
+# Entra app registration is handled declaratively by Bicep (infra/entra-app.bicep)
 
 $ErrorActionPreference = "Stop"
 $env:PYTHONIOENCODING = "utf-8"
 . "$PSScriptRoot/modules/HookLogging.ps1"
 Start-HookLog -HookName "preprovision" -EnvironmentName $env:AZURE_ENV_NAME
 
-Write-Host "Pre-Provision: Entra ID & AI Foundry Setup" -ForegroundColor Cyan
+Write-Host "Pre-Provision: AI Foundry Discovery" -ForegroundColor Cyan
 
 # Check prerequisites
 foreach ($cmd in @('pwsh', 'az')) {
@@ -40,22 +41,6 @@ if ([string]::IsNullOrWhiteSpace($tenantId)) {
 Write-Host "[OK] Tenant: $tenantId" -ForegroundColor Green
 
 Write-Host "[OK] Environment: $envName" -ForegroundColor Green
-
-# Create app registration
-$appName = "ai-foundry-agent-$envName"
-Write-Host "Creating app registration..." -ForegroundColor Cyan
-
-$params = @{ AppName = $appName; TenantId = $tenantId }
-$smr = $env:ENTRA_SERVICE_MANAGEMENT_REFERENCE
-if (-not [string]::IsNullOrWhiteSpace($smr)) { $params.ServiceManagementReference = $smr }
-
-$clientId = & "$PSScriptRoot/modules/New-EntraAppRegistration.ps1" @params
-if (-not $clientId) {
-    Write-Host "[ERROR] App registration failed. See deployment/hooks/README.md" -ForegroundColor Red
-    exit 1
-}
-azd env set ENTRA_SPA_CLIENT_ID $clientId
-Write-Host "[OK] Client ID: $clientId" -ForegroundColor Green
 
 # Discover AI Foundry resources
 Write-Host "Discovering AI Foundry resources..." -ForegroundColor Cyan
@@ -158,29 +143,6 @@ if ([string]::IsNullOrWhiteSpace($agentId)) {
     exit 1
 }
 
-# Create local dev config files
-$aiAgentEndpoint = (azd env get-value AI_AGENT_ENDPOINT 2>&1) | Where-Object { $_ -notmatch 'ERROR' } | Select-Object -First 1
-$aiAgentId = (azd env get-value AI_AGENT_ID 2>&1) | Where-Object { $_ -notmatch 'ERROR' } | Select-Object -First 1
-
-# Frontend .env.local
-@"
-# Auto-generated - Do not commit
-VITE_ENTRA_SPA_CLIENT_ID=$clientId
-VITE_ENTRA_TENANT_ID=$tenantId
-"@ | Out-File -FilePath "frontend/.env.local" -Encoding utf8 -Force
-
-# Backend .env
-@"
-# Auto-generated - Do not commit
-AzureAd__Instance=https://login.microsoftonline.com/
-AzureAd__TenantId=$tenantId
-AzureAd__ClientId=$clientId
-AzureAd__Audience=api://$clientId
-AI_AGENT_ENDPOINT=$aiAgentEndpoint
-AI_AGENT_ID=$aiAgentId
-"@ | Out-File -FilePath "backend/WebApp.Api/.env" -Encoding utf8 -Force
-
-Write-Host "[OK] Local dev config created" -ForegroundColor Green
 Write-Host "[OK] Pre-provision complete" -ForegroundColor Green
 
 if ($script:HookLogFile) {

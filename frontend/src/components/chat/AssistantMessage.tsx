@@ -77,7 +77,7 @@ function AssistantMessageComponent({
     }
   }, [message.id]);
   
-  // Build citation elements matching Azure AI Foundry style
+  // Build citation elements matching Foundry style
   const renderCitation = (annotation: IAnnotation, index: number, count: number = 1) => {
     const getIcon = () => {
       switch (annotation.type) {
@@ -110,7 +110,7 @@ function AssistantMessageComponent({
       }
     };
 
-    // Render citation button matching Azure AI Foundry style
+    // Render citation button matching Foundry style
     return (
       <Tooltip
         key={`${annotation.label}-${index}`}

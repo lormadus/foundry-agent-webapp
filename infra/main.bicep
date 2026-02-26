@@ -16,11 +16,11 @@ param aiAgentEndpoint string = ''
 @description('AI Agent ID (configured via azd env set AI_AGENT_ID)')
 param aiAgentId string = ''
 
-@description('Entra ID Client ID (set by azd hook)')
-param entraSpaClientId string = ''
-
 @description('Entra ID Tenant ID (set by azd hook or auto-detected)')
 param entraTenantId string = tenant().tenantId
+
+@description('Service Management Reference GUID (required by some orgs for Entra app registration)')
+param serviceManagementReference string = ''
 
 @description('Container image for web service (set by postprovision hook)')
 param webImageName string = 'mcr.microsoft.com/k8se/quickstart:latest'  // Placeholder during initial provision
@@ -37,7 +37,7 @@ var appTags = {
 
 var tags = union(defaultTags, appTags)
 
-resource rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
+resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: '${abbrs.resourcesResourceGroups}${environmentName}'
   location: location
   tags: tags
@@ -54,6 +54,17 @@ module infrastructure 'main-infrastructure.bicep' = {
   }
 }
 
+// Create Entra app registration (Microsoft Graph Bicep extension)
+// Creates with localhost-only redirect URIs; postprovision adds Container App FQDN
+module entraApp 'entra-app.bicep' = {
+  name: 'entra-app'
+  scope: rg
+  params: {
+    environmentName: environmentName
+    serviceManagementReference: serviceManagementReference
+  }
+}
+
 // Deploy application (Container Apps + RBAC)
 module app 'main-app.bicep' = {
   name: 'app'
@@ -66,7 +77,7 @@ module app 'main-app.bicep' = {
     containerRegistryName: infrastructure.outputs.containerRegistryName
     aiAgentEndpoint: aiAgentEndpoint
     aiAgentId: aiAgentId
-    entraSpaClientId: entraSpaClientId
+    entraSpaClientId: entraApp.outputs.clientAppId
     entraTenantId: entraTenantId
     webImageName: webImageName
   }
@@ -82,3 +93,5 @@ output AZURE_RESOURCE_GROUP_NAME string = rg.name
 output AZURE_CONTAINER_APP_NAME string = app.outputs.webAppName
 output WEB_ENDPOINT string = app.outputs.webEndpoint
 output WEB_IDENTITY_PRINCIPAL_ID string = app.outputs.webIdentityPrincipalId
+output ENTRA_SPA_CLIENT_ID string = entraApp.outputs.clientAppId
+output ENTRA_APP_OBJECT_ID string = entraApp.outputs.appObjectId

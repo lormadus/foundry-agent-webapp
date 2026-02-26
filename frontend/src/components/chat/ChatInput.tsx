@@ -90,6 +90,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       const timer = setTimeout(() => focusInput(inputContainerRef), 100);
       return () => clearTimeout(timer);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only on mount
 
   // Restore focus after message is sent (when status changes from disabled back to enabled)

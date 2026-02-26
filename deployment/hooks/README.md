@@ -19,28 +19,24 @@ All hooks now start a PowerShell transcript automatically and write logs to `.az
 
 | Hook | Purpose | Key Actions | Outputs |
 |------|---------|-------------|---------|
-| **preprovision.ps1** | Create Entra app + discover AI Foundry + generate config | • Discovers AI Foundry resources<br>• Creates Entra SPA app<br>• Generates `.env` files | `.env` and `.env.local` files |
-| **postprovision.ps1** | Configure Entra + RBAC | • Updates redirect URIs with production URL<br>• Assigns Cognitive Services User role to AI Foundry | Configured Entra app + RBAC |
+| **preprovision.ps1** | Discover AI Foundry + configure agent | • Discovers AI Foundry resources<br>• Auto-detects tenant ID<br>• Discovers agent in project | AI Foundry env vars |
+| **postprovision.ps1** | Configure Entra app + RBAC + local config | • Sets `identifierUri` on Entra app (can't be done in Bicep — self-references `appId`)<br>• Updates redirect URIs with production URL<br>• Assigns Cognitive Services User role to AI Foundry<br>• Generates local dev config files (`.env`, `.env.local`) | Configured Entra app + RBAC + local config |
 | **predeploy.ps1** | Build container image | • Detects Docker availability<br>• Local Docker build + push OR ACR cloud build<br>• Updates Container App if it exists | Container image in ACR |
-| **postdown.ps1** | Cleanup (optional) | • Removes RBAC assignment<br>• Deletes Entra app<br>• Optionally removes Docker images | Clean slate |
+| **postdown.ps1** | Cleanup (optional) | • Removes RBAC assignment<br>• Deletes Entra app (Graph resources aren't tied to RGs)<br>• Optionally removes Docker images | Clean slate |
+
+## Entra App Registration
+
+The Entra app is created **declaratively via Bicep** (`infra/entra-app.bicep`) using the Microsoft Graph Bicep extension (GA since July 2025). This replaces the previous `New-EntraAppRegistration.ps1` script.
+
+**What Bicep handles**: App creation, display name, sign-in audience, SPA redirect URIs (localhost only), `Chat.ReadWrite` scope, service principal, and `serviceManagementReference`.
+
+**What postprovision handles**: `identifierUri` (requires auto-generated `appId`), Container App FQDN redirect URI, and local dev config generation.
 
 ## Module Scripts
 
-### modules/New-EntraAppRegistration.ps1
-
-Reusable module for creating Entra ID app registrations with PKCE flow.
-
-**Usage**:
-```powershell
-$clientId = & ".\modules\New-EntraAppRegistration.ps1" `
-    -AppName "my-app" `
-    -TenantId $tenantId `
-    -RedirectUris @("http://localhost:5173")
-```
-
 ### modules/Get-AIFoundryAgents.ps1
 
-Discovers agents in an Azure AI Foundry project via REST API (`/agents?api-version=2025-11-15-preview`).
+Discovers agents in a Microsoft Foundry project via REST API (`/agents?api-version=2025-11-15-preview`).
 
 **Usage**:
 ```powershell
@@ -75,8 +71,8 @@ azd up
 
 | Issue | Fix |
 |-------|-----|
-| App registration fails with policy error | Run `azd env set ENTRA_SERVICE_MANAGEMENT_REFERENCE 'guid'` (see note below) |
-| Preprovision fails | Verify Azure CLI auth: `az account show` |
+| App registration fails with policy error | Run `azd env set ENTRA_SERVICE_MANAGEMENT_REFERENCE 'guid'` then `azd up` (Bicep passes it to Microsoft Graph extension) |
+| Provision fails | Verify Azure CLI auth: `az account show` |
 | Predeploy Docker build fails | Check Docker running: `docker version` (falls back to ACR cloud build) |
 | AI Foundry not found | Create resource at https://ai.azure.com |
 | Multiple AI Foundry resources | Set `AI_FOUNDRY_RESOURCE_NAME` or select when prompted |
@@ -118,3 +114,7 @@ azd env set AI_FOUNDRY_RESOURCE_NAME "your-ai-foundry-resource-name"
 | Always clean Docker images | `postdown.ps1` | Set `$cleanDockerImages = $true` |
 | Change ports | `start-local-dev.ps1` + Entra app URIs | Update port references |
 | Skip auto-opening browser | `postprovision.ps1` | Comment out `Start-Process` line |
+
+## See Also
+
+- `.github/hooks/` — Copilot agent hooks (commit gate, custom workflow policies). These are **different** from the azd deployment hooks in this directory.
