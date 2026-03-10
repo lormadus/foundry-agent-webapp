@@ -176,6 +176,7 @@ if ($webIdentityPrincipalId -and $aiFoundryResourceGroup -and $aiFoundryResource
 # Generate local dev config files (moved from preprovision — clientId comes from Bicep)
 $aiAgentEndpoint = azd env get-value AI_AGENT_ENDPOINT 2>$null
 $aiAgentId = azd env get-value AI_AGENT_ID 2>$null
+$aiAgentVersion = azd env get-value AI_AGENT_VERSION 2>$null
 
 # Frontend .env.local
 $frontendEnv = @"
@@ -189,7 +190,7 @@ if ($backendClientId) {
 $frontendEnv | Out-File -FilePath "frontend/.env.local" -Encoding utf8 -Force
 
 # Backend .env
-@"
+$backendEnvContent = @"
 # Auto-generated - Do not commit
 AzureAd__Instance=https://login.microsoftonline.com/
 AzureAd__TenantId=$tenantId
@@ -197,7 +198,11 @@ AzureAd__ClientId=$clientId
 AzureAd__Audience=api://$clientId
 AI_AGENT_ENDPOINT=$aiAgentEndpoint
 AI_AGENT_ID=$aiAgentId
-"@ | Out-File -FilePath "backend/WebApp.Api/.env" -Encoding utf8 -Force
+"@
+if ($aiAgentVersion) {
+    $backendEnvContent += "`nAI_AGENT_VERSION=$aiAgentVersion"
+}
+$backendEnvContent | Out-File -FilePath "backend/WebApp.Api/.env" -Encoding utf8 -Force
 
 Write-Host "[OK] Local dev config created" -ForegroundColor Green
 

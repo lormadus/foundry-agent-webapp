@@ -26,6 +26,7 @@ public class AgentFrameworkService : IDisposable
 {
     private readonly string _agentEndpoint;
     private readonly string _agentId;
+    private readonly string? _agentVersion;
     private readonly ILogger<AgentFrameworkService> _logger;
     private readonly IHttpContextAccessor? _httpContextAccessor;
     private readonly string? _backendClientId;
@@ -60,10 +61,15 @@ public class AgentFrameworkService : IDisposable
         _agentId = configuration["AI_AGENT_ID"]
             ?? throw new InvalidOperationException("AI_AGENT_ID is not configured");
 
+        _agentVersion = string.IsNullOrWhiteSpace(configuration["AI_AGENT_VERSION"])
+            ? null
+            : configuration["AI_AGENT_VERSION"];
+
         _logger.LogDebug(
-            "Initializing AgentFrameworkService: endpoint={Endpoint}, agentId={AgentId}", 
+            "Initializing AgentFrameworkService: endpoint={Endpoint}, agentId={AgentId}, version={Version}", 
             _agentEndpoint, 
-            _agentId);
+            _agentId,
+            _agentVersion ?? "latest");
 
         _backendClientId = configuration["ENTRA_BACKEND_CLIENT_ID"];
         _tenantId = configuration["ENTRA_TENANT_ID"] ?? configuration["AzureAd:TenantId"];
@@ -276,7 +282,7 @@ public class AgentFrameworkService : IDisposable
         // Always bind to conversation — the conversation maintains MCP approval state
         ProjectResponsesClient responsesClient
             = GetProjectClient().OpenAI.GetProjectResponsesClientForAgent(
-                new AgentReference(_agentId), 
+                new AgentReference(_agentId, _agentVersion), 
                 conversationId);
 
         // If continuing from MCP approval, add approval response items
@@ -761,7 +767,7 @@ public class AgentFrameworkService : IDisposable
             // Fetch limit+1 to detect if more conversations exist beyond the requested page
             var fetchLimit = limit + 1;
             await foreach (var conv in GetProjectClient().OpenAI.Conversations.GetProjectConversationsAsync(
-                new AgentReference(_agentId), cancellationToken: cancellationToken))
+                new AgentReference(_agentId, _agentVersion), cancellationToken: cancellationToken))
             {
                 conversations.Add(new ConversationSummary
                 {

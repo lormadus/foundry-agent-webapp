@@ -42,6 +42,82 @@ Write-Host "[OK] Tenant: $tenantId" -ForegroundColor Green
 
 Write-Host "[OK] Environment: $envName" -ForegroundColor Green
 
+# Map portal variables (AZURE_EXISTING_*) to app variables if present
+# The AI Foundry portal's "View sample app code" emits these when linking to this repo.
+# Users may paste them into azd env (.azure/<env>/.env) or a root .env file.
+$portalEndpoint = (azd env get-value AZURE_EXISTING_AIPROJECT_ENDPOINT 2>&1) | Where-Object { $_ -notmatch 'ERROR' } | Select-Object -First 1
+$portalAgentId = (azd env get-value AZURE_EXISTING_AGENT_ID 2>&1) | Where-Object { $_ -notmatch 'ERROR' } | Select-Object -First 1
+$portalResourceId = (azd env get-value AZURE_EXISTING_RESOURCE_ID 2>&1) | Where-Object { $_ -notmatch 'ERROR' } | Select-Object -First 1
+
+# Also check for a root .env file — the portal says "put in your .env file" without
+# specifying which one, so many users create one at the repo root.
+$rootEnvFile = Join-Path $PSScriptRoot "../../.env"
+if (Test-Path $rootEnvFile) {
+    $rootEnvVars = @{}
+    foreach ($line in Get-Content $rootEnvFile) {
+        $line = $line.Trim()
+        if ($line -and -not $line.StartsWith('#')) {
+            $eqIdx = $line.IndexOf('=')
+            if ($eqIdx -gt 0) {
+                $key = $line.Substring(0, $eqIdx).Trim()
+                $value = $line.Substring($eqIdx + 1).Trim().Trim('"')
+                $rootEnvVars[$key] = $value
+            }
+        }
+    }
+    if (-not $portalEndpoint -and $rootEnvVars['AZURE_EXISTING_AIPROJECT_ENDPOINT']) {
+        $portalEndpoint = $rootEnvVars['AZURE_EXISTING_AIPROJECT_ENDPOINT']
+    }
+    if (-not $portalAgentId -and $rootEnvVars['AZURE_EXISTING_AGENT_ID']) {
+        $portalAgentId = $rootEnvVars['AZURE_EXISTING_AGENT_ID']
+    }
+    if (-not $portalResourceId -and $rootEnvVars['AZURE_EXISTING_RESOURCE_ID']) {
+        $portalResourceId = $rootEnvVars['AZURE_EXISTING_RESOURCE_ID']
+    }
+}
+
+if ($portalEndpoint -or $portalAgentId -or $portalResourceId) {
+    Write-Host "Mapping portal variables (AZURE_EXISTING_*)..." -ForegroundColor Cyan
+
+    if ($portalEndpoint) {
+        $currentEndpoint = (azd env get-value AI_AGENT_ENDPOINT 2>&1) | Where-Object { $_ -notmatch 'ERROR' } | Select-Object -First 1
+        if ([string]::IsNullOrWhiteSpace($currentEndpoint)) {
+            azd env set AI_AGENT_ENDPOINT $portalEndpoint
+            Write-Host "[OK] Mapped AZURE_EXISTING_AIPROJECT_ENDPOINT -> AI_AGENT_ENDPOINT" -ForegroundColor Green
+        }
+    }
+
+    if ($portalAgentId) {
+        $currentAgentId = (azd env get-value AI_AGENT_ID 2>&1) | Where-Object { $_ -notmatch 'ERROR' } | Select-Object -First 1
+        if ([string]::IsNullOrWhiteSpace($currentAgentId)) {
+            # Portal format is "name:version" (e.g. "dadjokes:2") — split and map
+            # If no version suffix, AI_AGENT_VERSION remains unset (defaults to latest)
+            $parts = $portalAgentId -split ':', 2
+            $agentName = $parts[0].Trim()
+            azd env set AI_AGENT_ID $agentName
+            Write-Host "[OK] Mapped AZURE_EXISTING_AGENT_ID -> AI_AGENT_ID=$agentName" -ForegroundColor Green
+
+            $agentVersion = if ($parts.Count -gt 1) { $parts[1].Trim() } else { '' }
+            if ($agentVersion) {
+                azd env set AI_AGENT_VERSION $agentVersion
+                Write-Host "[OK] Mapped agent version -> AI_AGENT_VERSION=$agentVersion" -ForegroundColor Green
+            }
+        }
+    }
+
+    if ($portalResourceId) {
+        $currentResourceName = (azd env get-value AI_FOUNDRY_RESOURCE_NAME 2>&1) | Where-Object { $_ -notmatch 'ERROR' } | Select-Object -First 1
+        if ([string]::IsNullOrWhiteSpace($currentResourceName)) {
+            # Extract resource name from ARM path: .../accounts/<name>
+            $resourceName = (($portalResourceId -split '/accounts/')[-1] -split '/' | Select-Object -First 1).Trim()
+            if ($resourceName) {
+                azd env set AI_FOUNDRY_RESOURCE_NAME $resourceName
+                Write-Host "[OK] Mapped AZURE_EXISTING_RESOURCE_ID -> AI_FOUNDRY_RESOURCE_NAME=$resourceName" -ForegroundColor Green
+            }
+        }
+    }
+}
+
 # Discover AI Foundry resources
 Write-Host "Discovering AI Foundry resources..." -ForegroundColor Cyan
 

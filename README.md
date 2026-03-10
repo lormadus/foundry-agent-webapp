@@ -136,6 +136,21 @@ The workspace includes optimized VS Code configuration for AI-assisted developme
 - **Multiple resources found**: Prompts you to select which one to use
 - **RBAC**: Automatically grants the Container App's managed identity `Cognitive Services OpenAI Contributor` + `Azure AI Developer` roles
 
+**Coming from the AI Foundry portal?** If you clicked "View sample app code" in the portal, you can either paste the portal variables into a root `.env` file or set them via `azd env set`, then run `azd up`:
+
+```powershell
+# Option 1: Paste portal variables into a root .env file
+#   Create a .env file in the repo root with the portal values, then:
+azd up
+
+# Option 2: Set via azd environment
+azd env set AZURE_EXISTING_AGENT_ID "your-agent:2"
+azd env set AZURE_EXISTING_AIPROJECT_ENDPOINT "https://your-resource.services.ai.azure.com/api/projects/your-project"
+azd env set AZURE_EXISTING_RESOURCE_ID "/subscriptions/.../accounts/your-resource"
+azd up
+```
+The preprovision hook detects these portal variables (from either location) and maps them automatically.
+
 **Change AI Foundry resource**:
 ```powershell
 # Option 1: Let azd discover and prompt for selection
